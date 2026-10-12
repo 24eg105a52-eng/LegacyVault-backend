@@ -1,0 +1,28 @@
+services:
+  - type: web
+    name: legacyvault-backend
+    runtime: docker
+    dockerfilePath: Dockerfile
+    plan: free
+    region: oregon
+    healthCheckPath: /api/health
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: legacyvault-postgres
+          property: connectionString
+      - key: JWT_SECRET
+        generateValue: true
+      - key: VAULT_ENCRYPTION_SECRET
+        generateValue: true
+      - key: CORS_ALLOWED_ORIGINS
+        value: https://*.vercel.app,http://localhost:5173
+      - key: VAULT_STORAGE_DIR
+        value: /var/data/vault_files
+
+databases:
+  - name: legacyvault-postgres
+    databaseName: legacy_vault
+    user: legacyvault
+    plan: free
+    region: oregon

@@ -1,0 +1,42 @@
+# ==============================================================================
+# LegacyVault Backend .gitignore
+# ==============================================================================
+
+# Compiled Java & Maven build artifacts
+target/
+*.class
+*.jar
+*.war
+*.ear
+
+# Logs
+*.log
+logs/
+
+# IDE & Editor metadata
+.idea/
+*.iml
+.vscode/
+.classpath
+.project
+.settings/
+
+# OS metadata
+.DS_Store
+Thumbs.db
+
+# Environment variables & local secrets
+.env
+.env.*
+!.env.example
+application-local.properties
+application-secret.properties
+*.key
+*.pem
+*.p12
+
+# Local vault file storage (uploaded files)
+storage/
+**/storage/
+vault_files/
+**/vault_files/

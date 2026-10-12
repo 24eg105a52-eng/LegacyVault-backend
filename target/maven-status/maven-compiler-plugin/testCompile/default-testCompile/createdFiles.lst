@@ -1,8 +1,0 @@
-com\legacyvault\service\InactivitySchedulerServiceTest.class
-com\legacyvault\service\VaultServiceTest.class
-com\legacyvault\LegacyVaultApplicationTests.class
-com\legacyvault\service\UserServiceTest.class
-com\legacyvault\controller\AuthControllerTest.class
-com\legacyvault\service\FileStorageServiceTest.class
-com\legacyvault\security\EncryptionServiceTest.class
-com\legacyvault\security\JwtUtilTest.class
