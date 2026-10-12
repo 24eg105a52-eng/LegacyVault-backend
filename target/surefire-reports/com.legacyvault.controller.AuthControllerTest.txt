@@ -1,0 +1,4 @@
+-------------------------------------------------------------------------------
+Test set: com.legacyvault.controller.AuthControllerTest
+-------------------------------------------------------------------------------
+Tests run: 5, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 5.350 s -- in com.legacyvault.controller.AuthControllerTest
