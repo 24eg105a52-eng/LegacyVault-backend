@@ -14,6 +14,8 @@ public class ContactResponse {
     private String relationship;
     private String roleType;
     private String verificationStatus;
+    private LocalDateTime verifiedAt;
+    private LocalDateTime verificationTokenExpiresAt;
     private LocalDateTime createdAt;
 
     public ContactResponse() {
@@ -22,6 +24,13 @@ public class ContactResponse {
     public ContactResponse(Long id, String fullName, String email, String phoneNumber,
                            String relationship, String roleType, String verificationStatus,
                            LocalDateTime createdAt) {
+        this(id, fullName, email, phoneNumber, relationship, roleType, verificationStatus, null, null, createdAt);
+    }
+
+    public ContactResponse(Long id, String fullName, String email, String phoneNumber,
+                           String relationship, String roleType, String verificationStatus,
+                           LocalDateTime verifiedAt, LocalDateTime verificationTokenExpiresAt,
+                           LocalDateTime createdAt) {
         this.id = id;
         this.fullName = fullName;
         this.email = email;
@@ -29,6 +38,8 @@ public class ContactResponse {
         this.relationship = relationship;
         this.roleType = roleType;
         this.verificationStatus = verificationStatus;
+        this.verifiedAt = verifiedAt;
+        this.verificationTokenExpiresAt = verificationTokenExpiresAt;
         this.createdAt = createdAt;
     }
 
@@ -86,6 +97,22 @@ public class ContactResponse {
 
     public void setVerificationStatus(String verificationStatus) {
         this.verificationStatus = verificationStatus;
+    }
+
+    public LocalDateTime getVerifiedAt() {
+        return verifiedAt;
+    }
+
+    public void setVerifiedAt(LocalDateTime verifiedAt) {
+        this.verifiedAt = verifiedAt;
+    }
+
+    public LocalDateTime getVerificationTokenExpiresAt() {
+        return verificationTokenExpiresAt;
+    }
+
+    public void setVerificationTokenExpiresAt(LocalDateTime verificationTokenExpiresAt) {
+        this.verificationTokenExpiresAt = verificationTokenExpiresAt;
     }
 
     public LocalDateTime getCreatedAt() {

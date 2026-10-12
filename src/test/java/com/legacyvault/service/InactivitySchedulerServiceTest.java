@@ -62,12 +62,16 @@ class InactivitySchedulerServiceTest {
 
         when(gracePeriodReminderRepository.existsByUserIdAndReminderNumberAndStatus(5L, 1, "SENT"))
                 .thenReturn(false);
+        when(gracePeriodReminderRepository.existsByUserIdAndReminderNumberAndStatus(5L, 1, "SIMULATED"))
+                .thenReturn(false);
+        when(notificationService.sendInactivityWarningDetailed(eq(user), eq(1), eq(14)))
+                .thenReturn(NotificationService.NotificationResult.sent("Sent notice"));
 
         schedulerService.processUserInactivity(user, now);
 
         assertEquals("WARNING_GRACE_PERIOD", user.getInactivityStatus());
         verify(userRepository).save(user);
-        verify(notificationService).sendInactivityWarning(eq(user), eq(1), eq(14));
+        verify(notificationService).sendInactivityWarningDetailed(eq(user), eq(1), eq(14));
 
         ArgumentCaptor<GracePeriodReminder> captor = ArgumentCaptor.forClass(GracePeriodReminder.class);
         verify(gracePeriodReminderRepository).save(captor.capture());
@@ -77,6 +81,27 @@ class InactivitySchedulerServiceTest {
         assertEquals("SENT", reminder.getStatus());
 
         verify(auditLogRepository).save(any(AuditLog.class));
+    }
+
+    @Test
+    void processUserInactivity_WhenEmailFails_ShouldRecordFailedStatusAndNotFalselyMarkSent() {
+        LocalDateTime now = LocalDateTime.now();
+        user.setLastHeartbeatAt(now.minusDays(35));
+
+        when(gracePeriodReminderRepository.existsByUserIdAndReminderNumberAndStatus(5L, 1, "SENT"))
+                .thenReturn(false);
+        when(gracePeriodReminderRepository.existsByUserIdAndReminderNumberAndStatus(5L, 1, "SIMULATED"))
+                .thenReturn(false);
+        when(notificationService.sendInactivityWarningDetailed(eq(user), eq(1), eq(14)))
+                .thenReturn(NotificationService.NotificationResult.failed("SMTP connection refused"));
+
+        schedulerService.processUserInactivity(user, now);
+
+        ArgumentCaptor<GracePeriodReminder> captor = ArgumentCaptor.forClass(GracePeriodReminder.class);
+        verify(gracePeriodReminderRepository).save(captor.capture());
+        GracePeriodReminder reminder = captor.getValue();
+        assertEquals("FAILED", reminder.getStatus());
+        assertNotEquals("SENT", reminder.getStatus());
     }
 
     @Test
@@ -92,7 +117,7 @@ class InactivitySchedulerServiceTest {
         assertEquals("WARNING_GRACE_PERIOD", user.getInactivityStatus());
         verify(userRepository).save(user);
         // Notice must NOT be sent again
-        verify(notificationService, never()).sendInactivityWarning(any(), anyInt(), anyInt());
+        verify(notificationService, never()).sendInactivityWarningDetailed(any(), anyInt(), anyInt());
     }
 
     @Test
@@ -111,13 +136,15 @@ class InactivitySchedulerServiceTest {
 
         when(gracePeriodReminderRepository.findTopByUserIdOrderByCreatedAtDesc(5L))
                 .thenReturn(Optional.of(existingReminder));
+        when(notificationService.sendInactivityWarningDetailed(eq(user), eq(3), eq(0)))
+                .thenReturn(NotificationService.NotificationResult.sent("Final notice sent"));
 
         schedulerService.processUserInactivity(user, now);
 
         assertEquals("INACTIVE_PENDING_VERIFICATION", user.getInactivityStatus());
         assertEquals("EXPIRED_WITHOUT_RESPONSE", existingReminder.getStatus());
         verify(userRepository).save(user);
-        verify(notificationService).sendInactivityWarning(eq(user), eq(3), eq(0));
+        verify(notificationService).sendInactivityWarningDetailed(eq(user), eq(3), eq(0));
         verify(gracePeriodReminderRepository, atLeastOnce()).save(any(GracePeriodReminder.class));
     }
 }

@@ -14,7 +14,8 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
 /**
- * REST controller managing designated trusted contacts and beneficiaries.
+ * REST controller managing designated trusted contacts, beneficiaries,
+ * resending invitation tokens, and public token verification.
  */
 @RestController
 @RequestMapping("/api/contacts")
@@ -49,6 +50,33 @@ public class ContactController {
             return ResponseEntity.status(HttpStatus.CONFLICT).body(response);
         }
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
+    }
+
+    @PostMapping("/{id}/resend-invite")
+    public ResponseEntity<ApiResponse> resendInvitation(
+            @AuthenticationPrincipal User currentUser,
+            @PathVariable Long id) {
+        if (currentUser == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(new ApiResponse(false, "Authentication required."));
+        }
+        ApiResponse response = contactService.resendInvitation(currentUser, id);
+        if (!response.isSuccess()) {
+            return ResponseEntity.badRequest().body(response);
+        }
+        return ResponseEntity.ok(response);
+    }
+
+    /**
+     * Public endpoint to verify a trusted contact's email using single-use cryptographic token.
+     */
+    @GetMapping("/verify")
+    public ResponseEntity<ApiResponse> verifyContact(@RequestParam("token") String token) {
+        ApiResponse response = contactService.verifyContactToken(token);
+        if (!response.isSuccess()) {
+            return ResponseEntity.badRequest().body(response);
+        }
+        return ResponseEntity.ok(response);
     }
 
     @DeleteMapping("/{id}")

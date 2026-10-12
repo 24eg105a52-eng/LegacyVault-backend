@@ -47,6 +47,9 @@ public class TrustedContact {
     @Column(name = "verification_token_hash", length = 255)
     private String verificationTokenHash;
 
+    @Column(name = "verification_token_expires_at")
+    private LocalDateTime verificationTokenExpiresAt;
+
     @Column(name = "verified_at")
     private LocalDateTime verifiedAt;
 
@@ -145,6 +148,14 @@ public class TrustedContact {
 
     public void setVerificationTokenHash(String verificationTokenHash) {
         this.verificationTokenHash = verificationTokenHash;
+    }
+
+    public LocalDateTime getVerificationTokenExpiresAt() {
+        return verificationTokenExpiresAt;
+    }
+
+    public void setVerificationTokenExpiresAt(LocalDateTime verificationTokenExpiresAt) {
+        this.verificationTokenExpiresAt = verificationTokenExpiresAt;
     }
 
     public LocalDateTime getVerifiedAt() {

@@ -32,6 +32,8 @@ public class PostgresDialectCompatibilityTest {
             sources.addAnnotatedClass(com.legacyvault.model.GracePeriodReminder.class);
             sources.addAnnotatedClass(com.legacyvault.model.EmergencyAccessRequest.class);
             sources.addAnnotatedClass(com.legacyvault.model.AuditLog.class);
+            sources.addAnnotatedClass(com.legacyvault.model.DeathClaim.class);
+            sources.addAnnotatedClass(com.legacyvault.model.AssetRelease.class);
 
             var metadata = sources.buildMetadata();
             assertNotNull(metadata);

@@ -44,7 +44,7 @@ CREATE TABLE users (
     grace_period_days INT NOT NULL DEFAULT 14 COMMENT 'Warning duration before policies can be evaluated',
     emergency_delay_hours INT NOT NULL DEFAULT 168 COMMENT 'Owner veto window (168h = 7 days)',
     last_heartbeat_at TIMESTAMP NULL COMMENT 'Updated whenever user logs in or sends manual heartbeat ping',
-    inactivity_status ENUM('ACTIVE', 'WARNING_GRACE_PERIOD', 'INACTIVE_PENDING_VERIFICATION', 'SETTLED')
+    inactivity_status ENUM('ACTIVE', 'WARNING_GRACE_PERIOD', 'INACTIVE_PENDING_VERIFICATION', 'DEATH_VERIFIED', 'SETTLED')
         NOT NULL DEFAULT 'ACTIVE' COMMENT 'State of the user account in the inheritance lifecycle',
 
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -71,6 +71,7 @@ CREATE TABLE trusted_contacts (
     verification_status ENUM('INVITED', 'PENDING_VERIFICATION', 'VERIFIED', 'REVOKED')
         NOT NULL DEFAULT 'INVITED' COMMENT 'Two-factor or identity confirmation status',
     verification_token_hash VARCHAR(255) NULL COMMENT 'Hash of confirmation token sent via secure channel',
+    verification_token_expires_at TIMESTAMP NULL COMMENT 'Time-limited expiration timestamp for confirmation token',
     verified_at TIMESTAMP NULL,
 
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -186,7 +187,7 @@ CREATE TABLE grace_period_reminders (
     reminder_number INT NOT NULL COMMENT '1 = First Warning, 2 = Midpoint Warning, 3 = Final Notice',
     sent_to_email VARCHAR(255) NOT NULL,
     grace_period_expires_at TIMESTAMP NOT NULL,
-    status ENUM('SENT', 'ACKNOWLEDGED_BY_USER', 'EXPIRED_WITHOUT_RESPONSE')
+    status ENUM('SENT', 'SIMULATED', 'FAILED', 'ACKNOWLEDGED_BY_USER', 'EXPIRED_WITHOUT_RESPONSE')
         NOT NULL DEFAULT 'SENT',
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
@@ -256,4 +257,89 @@ CREATE TABLE audit_logs (
     INDEX idx_audit_user (user_id),
     INDEX idx_audit_action (action),
     INDEX idx_audit_created_at (created_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ==============================================================================
+-- 9. DEATH CLAIMS TABLE
+-- Strict verification and evidence review workflow for verified death confirmation.
+-- Inactivity alone or grace period expiration is NEVER proof of death.
+-- ==============================================================================
+CREATE TABLE death_claims (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    user_id BIGINT NOT NULL COMMENT 'Vault owner being claimed deceased',
+    contact_id BIGINT NOT NULL COMMENT 'Designated trusted contact submitting claim',
+    claimant_email VARCHAR(255) NOT NULL,
+    claim_status ENUM('PENDING_OWNER_CHALLENGE', 'PENDING_MANUAL_REVIEW', 'APPROVED_DEATH_VERIFIED', 'REJECTED', 'VETOED_BY_OWNER')
+        NOT NULL DEFAULT 'PENDING_OWNER_CHALLENGE',
+
+    -- Supporting evidence document metadata (Death Certificate, Coroner Report)
+    evidence_file_name VARCHAR(255) NULL,
+    evidence_file_type VARCHAR(100) NULL,
+    evidence_file_size BIGINT NULL,
+    evidence_storage_path VARCHAR(500) NULL,
+    evidence_notes TEXT NULL COMMENT 'Official certificate registration number, issuing authority, jurisdiction',
+
+    -- Mandatory owner protection and challenge window
+    challenge_window_expires_at TIMESTAMP NOT NULL COMMENT 'Owner veto window deadline',
+
+    -- Authorized reviewer evaluation
+    review_notes TEXT NULL COMMENT 'Written justification documenting verification decision',
+    reviewed_by_user_id BIGINT NULL COMMENT 'Authorized administrator/verifier user ID',
+    reviewed_at TIMESTAMP NULL,
+
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+
+    CONSTRAINT fk_claim_user
+        FOREIGN KEY (user_id) REFERENCES users(id)
+        ON DELETE CASCADE ON UPDATE CASCADE,
+
+    CONSTRAINT fk_claim_contact
+        FOREIGN KEY (contact_id) REFERENCES trusted_contacts(id)
+        ON DELETE CASCADE ON UPDATE CASCADE,
+
+    CONSTRAINT fk_claim_reviewer
+        FOREIGN KEY (reviewed_by_user_id) REFERENCES users(id)
+        ON DELETE SET NULL ON UPDATE CASCADE,
+
+    INDEX idx_claim_user (user_id),
+    INDEX idx_claim_contact (contact_id),
+    INDEX idx_claim_status (claim_status)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ==============================================================================
+-- 10. ASSET RELEASES TABLE
+-- Tracks explicit digital asset releases authorized exclusively after death verification.
+-- ==============================================================================
+CREATE TABLE asset_releases (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    claim_id BIGINT NOT NULL,
+    asset_id BIGINT NOT NULL,
+    contact_id BIGINT NOT NULL,
+    permission_level ENUM('VIEW_ONLY', 'FULL_TRANSFER') NOT NULL DEFAULT 'VIEW_ONLY',
+    release_status ENUM('RELEASED', 'REVOKED') NOT NULL DEFAULT 'RELEASED',
+    access_token_hash VARCHAR(255) NULL,
+    access_token_expires_at TIMESTAMP NULL,
+    released_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT fk_release_claim
+        FOREIGN KEY (claim_id) REFERENCES death_claims(id)
+        ON DELETE CASCADE ON UPDATE CASCADE,
+
+    CONSTRAINT fk_release_asset
+        FOREIGN KEY (asset_id) REFERENCES vault_assets(id)
+        ON DELETE CASCADE ON UPDATE CASCADE,
+
+    CONSTRAINT fk_release_contact
+        FOREIGN KEY (contact_id) REFERENCES trusted_contacts(id)
+        ON DELETE CASCADE ON UPDATE CASCADE,
+
+    CONSTRAINT uk_release_asset_contact
+        UNIQUE (asset_id, contact_id),
+
+    INDEX idx_release_claim (claim_id),
+    INDEX idx_release_asset (asset_id),
+    INDEX idx_release_contact (contact_id),
+    INDEX idx_release_status (release_status)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

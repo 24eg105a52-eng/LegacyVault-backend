@@ -30,7 +30,7 @@ public class GracePeriodReminder {
     @Column(name = "grace_period_expires_at", nullable = false)
     private LocalDateTime gracePeriodExpiresAt;
 
-    @Column(name = "status", columnDefinition = "ENUM('SENT', 'ACKNOWLEDGED_BY_USER', 'EXPIRED_WITHOUT_RESPONSE')", nullable = false)
+    @Column(name = "status", columnDefinition = "ENUM('SENT', 'SIMULATED', 'FAILED', 'ACKNOWLEDGED_BY_USER', 'EXPIRED_WITHOUT_RESPONSE')", nullable = false)
     private String status = "SENT";
 
     @Column(name = "created_at", nullable = false, updatable = false)

@@ -47,7 +47,7 @@ public class User {
     @Column(name = "last_heartbeat_at")
     private LocalDateTime lastHeartbeatAt;
 
-    @Column(name = "inactivity_status", columnDefinition = "ENUM('ACTIVE', 'WARNING_GRACE_PERIOD', 'INACTIVE_PENDING_VERIFICATION', 'SETTLED')", nullable = false)
+    @Column(name = "inactivity_status", columnDefinition = "ENUM('ACTIVE', 'WARNING_GRACE_PERIOD', 'INACTIVE_PENDING_VERIFICATION', 'DEATH_VERIFIED', 'SETTLED')", nullable = false)
     private String inactivityStatus = "ACTIVE";
 
     @Column(name = "created_at", nullable = false, updatable = false)

@@ -84,22 +84,23 @@ public class InactivitySchedulerService {
             userRepository.save(user);
 
             boolean reminderExists = gracePeriodReminderRepository
-                    .existsByUserIdAndReminderNumberAndStatus(user.getId(), 1, "SENT");
+                    .existsByUserIdAndReminderNumberAndStatus(user.getId(), 1, "SENT")
+                    || gracePeriodReminderRepository.existsByUserIdAndReminderNumberAndStatus(user.getId(), 1, "SIMULATED");
 
             if (!reminderExists) {
                 LocalDateTime expiresAt = now.plusDays(graceDays);
-                notificationService.sendInactivityWarning(user, 1, graceDays);
+                NotificationService.NotificationResult result = notificationService.sendInactivityWarningDetailed(user, 1, graceDays);
 
                 GracePeriodReminder reminder = new GracePeriodReminder();
                 reminder.setUser(user);
                 reminder.setReminderNumber(1);
                 reminder.setSentToEmail(user.getEmail());
                 reminder.setGracePeriodExpiresAt(expiresAt);
-                reminder.setStatus("SENT");
+                reminder.setStatus(result.status());
                 gracePeriodReminderRepository.save(reminder);
 
                 recordAudit(user, "INACTIVITY_WARNING_TRIGGERED",
-                        "Heartbeat threshold reached (" + daysInactive + " days). Sent Grace Period Warning #1.");
+                        "Heartbeat threshold reached (" + daysInactive + " days). Sent Grace Period Warning #1 (Status: " + result.status() + ").");
             }
         }
         // 2. User is currently in WARNING_GRACE_PERIOD
@@ -120,14 +121,14 @@ public class InactivitySchedulerService {
                     gracePeriodReminderRepository.save(latestReminder);
 
                     // Send final notice
-                    notificationService.sendInactivityWarning(user, 3, 0);
+                    NotificationService.NotificationResult finalResult = notificationService.sendInactivityWarningDetailed(user, 3, 0);
 
                     GracePeriodReminder finalReminder = new GracePeriodReminder();
                     finalReminder.setUser(user);
                     finalReminder.setReminderNumber(3);
                     finalReminder.setSentToEmail(user.getEmail());
                     finalReminder.setGracePeriodExpiresAt(now);
-                    finalReminder.setStatus("SENT");
+                    finalReminder.setStatus(finalResult.status());
                     gracePeriodReminderRepository.save(finalReminder);
 
                     recordAudit(user, "GRACE_PERIOD_EXPIRED",
@@ -136,21 +137,22 @@ public class InactivitySchedulerService {
                     // Still in grace period: Check if midpoint reminder #2 should be sent
                     long daysRemaining = Duration.between(now, expiresAt).toDays();
                     boolean reminder2Sent = gracePeriodReminderRepository
-                            .existsByUserIdAndReminderNumberAndStatus(user.getId(), 2, "SENT");
+                            .existsByUserIdAndReminderNumberAndStatus(user.getId(), 2, "SENT")
+                            || gracePeriodReminderRepository.existsByUserIdAndReminderNumberAndStatus(user.getId(), 2, "SIMULATED");
 
                     if (daysRemaining <= (graceDays / 2) && !reminder2Sent) {
-                        notificationService.sendInactivityWarning(user, 2, (int) Math.max(1, daysRemaining));
+                        NotificationService.NotificationResult midResult = notificationService.sendInactivityWarningDetailed(user, 2, (int) Math.max(1, daysRemaining));
 
                         GracePeriodReminder midReminder = new GracePeriodReminder();
                         midReminder.setUser(user);
                         midReminder.setReminderNumber(2);
                         midReminder.setSentToEmail(user.getEmail());
                         midReminder.setGracePeriodExpiresAt(expiresAt);
-                        midReminder.setStatus("SENT");
+                        midReminder.setStatus(midResult.status());
                         gracePeriodReminderRepository.save(midReminder);
 
                         recordAudit(user, "INACTIVITY_MIDPOINT_WARNING",
-                                "Sent Grace Period Midpoint Warning #2 (" + daysRemaining + " days remaining).");
+                                "Sent Grace Period Midpoint Warning #2 (" + daysRemaining + " days remaining, Status: " + midResult.status() + ").");
                     }
                 }
             }

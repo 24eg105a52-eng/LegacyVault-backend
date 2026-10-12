@@ -14,6 +14,12 @@ public interface TrustedContactRepository extends JpaRepository<TrustedContact, 
 
     Optional<TrustedContact> findByIdAndUserId(Long id, Long userId);
 
+    Optional<TrustedContact> findByVerificationTokenHash(String verificationTokenHash);
+
+    List<TrustedContact> findByEmail(String email);
+
+    Optional<TrustedContact> findByUserIdAndEmail(Long userId, String email);
+
     boolean existsByUserIdAndEmail(Long userId, String email);
 
     long countByUserId(Long userId);
