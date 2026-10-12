@@ -182,7 +182,7 @@ public class VaultService {
     /**
      * Securely retrieves and decrypts an attached document for its authenticated owner.
      */
-    @Transactional(readOnly = true)
+    @Transactional
     public Optional<DecryptedFile> loadAssetFile(User user, Long assetId) throws IOException {
         Optional<VaultAsset> existingOpt = vaultAssetRepository.findByIdAndUserId(assetId, user.getId())
                 .filter(VaultAsset::getIsActive);
